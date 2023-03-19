@@ -5,6 +5,7 @@ export default defineConfig({
   title: "Danny Blog",
   description: "A VitePress Site",
   outDir: 'dist',
+  srcDir: 'src',
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [

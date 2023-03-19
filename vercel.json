@@ -1,0 +1,6 @@
+{
+  "cleanUrls": true,
+  "devCommand": "npm run docs:preview",
+  "buildCommand": "npm run  docs:build",
+  "installCommand": "npm install"
+}

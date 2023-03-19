@@ -1,0 +1,1 @@
+import{_ as s,o as a,c as n,N as l}from"./chunks/framework.b62a7fb5.js";const i=JSON.parse('{"title":"PostgreSQL","description":"","frontmatter":{},"headers":[],"relativePath":"PostgreSQL.md"}'),p={name:"PostgreSQL.md"},o=l("",126),e=[o];function t(c,r,C,D,y,A){return a(),n("div",null,e)}const d=s(p,[["render",t]]);export{i as __pageData,d as default};
