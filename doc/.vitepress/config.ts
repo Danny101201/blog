@@ -19,6 +19,15 @@ export default defineConfig({
           { text: 'Markdown Examples', link: '/markdown-examples' },
           { text: 'Runtime API Examples', link: '/api-examples' },
           { text: 'PostgreSQL', link: '/PostgreSQL' },
+          { text: 'demo', link: '/demo' },
+        ],
+        collapsed: true
+      },
+      {
+        text: 'Demo',
+        items: [
+          { text: 'foo', link: '/packages/foo' },
+          { text: 'bar', link: '/packages/bar' },
         ]
       }
     ],

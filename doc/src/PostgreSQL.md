@@ -8,6 +8,8 @@
 learn
 https://docs.postgresql.tw/the-sql-language/sql-syntax/4.3.-han-shu-hu-jiao
 
+https://www.prisma.io/blog/backend-prisma-typescript-orm-with-postgresql-data-modeling-tsjs1ps7kip1
+
 
 ## add PATH to zshrc
 添加PostgreSQL環境變數就可以指定psql cli默認執行的lib位置
@@ -576,6 +578,9 @@ Expanded display is off.
 ```
 
 ### inner join
+將兩個table條件符合的結果顯示出來
+![](https://i.imgur.com/IpmIi5a.png)
+
 
 inner join是table的fk 與reference的pk的聯合查詢，指令 join [fk_table] on [pk_table][field_id]=[fk_table][field_id] ;
 ```javascript
@@ -622,3 +627,210 @@ first_name | Rafa
 email      | rhallagan0@amazonaws.com
 make       | MINI
 ```
+
+### left join
+將table1的結果與符合table2的合集顯示出來
+![](https://i.imgur.com/cDY7mjJ.png)
+
+這裡就列出person有car跟person沒有car的結果
+```javascript
+danny=#  select * from person left join car on person.car_id = car.id;
+
+-[ RECORD 1 ]----+-----------------------------------
+id               | 2
+first_name       | Win
+last_name        | Twede
+email            | wtwede2@so-net.ne.jp
+gender           | Male
+date_of_birth    | 2022-10-06
+car_id           |
+country_of_birth | Colombia
+id               |
+make             |
+model            |
+price            |
+-[ RECORD 2 ]----+-----------------------------------
+id               | 3
+first_name       | Obie
+last_name        | Fitter
+email            |
+gender           | Male
+date_of_birth    | 2023-02-02
+car_id           |
+country_of_birth | Philippines
+id               |
+make             |
+model            |
+price            |
+```
+
+但如果我們只想顯示person沒有car的資料可以使用left outer join，結果如下
+![](https://i.imgur.com/Jd68xz6.png)
+```javascript
+danny=# select * from person
+danny-# left join car on person.car_id=car.id
+danny-# where car.* is null;
+
+-[ RECORD 1 ]----+-----------------------------------
+id               | 2
+first_name       | Win
+last_name        | Twede
+email            | wtwede2@so-net.ne.jp
+gender           | Male
+date_of_birth    | 2022-10-06
+car_id           |
+country_of_birth | Colombia
+id               |
+make             |
+model            |
+price            |
+-[ RECORD 2 ]----+-----------------------------------
+id               | 3
+first_name       | Obie
+last_name        | Fitter
+email            |
+gender           | Male
+date_of_birth    | 2023-02-02
+car_id           |
+country_of_birth | Philippines
+id               |
+make             |
+model            |
+price            |
+```
+
+如果只用join不用left join就會是(0 rows)
+```javascript
+danny=# select * from person
+join car on person.car_id = car.id
+where car.* is null;
+(0 rows)
+```
+
+### delete from foregin keys
+
+當我們要刪除fk的資料時，sql會跟你說pk fk的關係所以不能刪除
+```javascript
+danny=# delete from car where id = 1100;
+ERROR:  update or delete on table "car" violates foreign key constraint "person_car_fkey" on table "person"
+DETAIL:  Key (id)=(1100) is still referenced from table "person".
+```
+這是因為我們在宣告person的constraint時沒有同時宣告on update跟on delete時要做什麼action
+```javascript
+danny=# \d person
+                                        Table "public.person"
+      Column      |         Type          | Collation | Nullable |              Default
+------------------+-----------------------+-----------+----------+------------------------------------
+ id               | bigint                |           | not null | nextval('person_id_seq'::regclass)
+ first_name       | character varying(50) |           | not null |
+ last_name        | character varying(50) |           | not null |
+ email            | character varying(50) |           |          |
+ gender           | character varying(50) |           | not null |
+ date_of_birth    | date                  |           | not null |
+ car_id           | bigint                |           |          |
+ country_of_birth | character varying(50) |           |          |
+Indexes:
+    "person_pkey" PRIMARY KEY, btree (id)
+    "unique_email_address" UNIQUE CONSTRAINT, btree (email)
+Check constraints:
+    "gender_constraint" CHECK (gender::text = ANY (ARRAY['Male'::character varying, 'Female'::character varying]::text[]))
+Foreign-key constraints:
+    "person_car_fkey" FOREIGN KEY (car_id) REFERENCES car(id)
+```
+
+
+### 修改constraint
+
+constraint的更動因為沒有update方式，所以需要先drop後從新新增，如下圖：
+```javascript
+danny=# alter table person drop constraint person_car_fkey;
+ALTER TABLE
+
+danny=# alter table person add constraint person_car_fkey FOREIGN KEY(car_id) REFERENCES car(id) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE
+```
+
+在constraint中on update、on delete可以添加對應的action規則，告訴sql當你的pk或是fk資料發生異動時，需要做什麼事情。
+
+**constraint 的 action 如下：**
+
+* ```on update``` 和 ```on delete``` 后面可以跟的词语有四个
+* ```no action``` 表示不做任何操作，
+* ```set null``` 表示在外流件對應的字段為null
+* ```set default``` 設置為默認值(restrict)
+* ```cascade``` 聯集操作，如果主鍵的參考值更新，外來鍵的data也會更動，如果主鍵刪除，外來鍵的資料也會移除
+
+之後查看修改結果，首先更改資料
+```javascript
+danny=# update person set car_id = 25 where id = 150;
+UPDATE 1
+danny=# select * from car where id = 25;
+-[ RECORD 1 ]-----
+id    | 25
+make  | Mazda
+model | Miata MX-5
+price | 19424.00
+
+danny=# select * from person where id = 150;
+-[ RECORD 1 ]----+-----------
+id               | 150
+first_name       | Gabriel
+last_name        | Roseburgh
+email            |
+gender           | Female
+date_of_birth    | 2022-11-15
+car_id           | 25
+country_of_birth | China
+```
+這時car資料一但移除person也同步刪除了
+```javascript
+danny=# delete from car where id = 25;
+DELETE 1
+
+danny=# select * from person where id = 150;
+(0 rows)
+
+danny=# select * from car where id = 25;
+(0 rows)
+```
+修改後的constraint如下，person_car_fkey(FOREIGN KEY)設成ON UPDATE CASCADE ON DELETE CASCADE這樣主見跟外流間刪除時就會同步移除
+```javascript
+                                        Table "public.person"
+      Column      |         Type          | Collation | Nullable |              Default
+------------------+-----------------------+-----------+----------+------------------------------------
+ id               | bigint                |           | not null | nextval('person_id_seq'::regclass)
+ first_name       | character varying(50) |           | not null |
+ last_name        | character varying(50) |           | not null |
+ email            | character varying(50) |           |          |
+ gender           | character varying(50) |           | not null |
+ date_of_birth    | date                  |           | not null |
+ car_id           | bigint                |           |          |
+ country_of_birth | character varying(50) |           |          |
+Indexes:
+    "person_pkey" PRIMARY KEY, btree (id)
+    "unique_email_address" UNIQUE CONSTRAINT, btree (email)
+Check constraints:
+    "gender_constraint" CHECK (gender::text = ANY (ARRAY['Male'::character varying, 'Female'::character varying]::text[]))
+Foreign-key constraints:
+    "person_car_fkey" FOREIGN KEY (car_id) REFERENCES car(id) ON UPDATE CASCADE ON DELETE CASCADE
+```
+所以在sql宣告table時，我們需要確認當主鍵鍵或外來鍵新增或刪除時需要做什麼action
+
+```javascript
+create table person (
+	id bigserial NOT NULL PRIMARY KEY,
+	first_name VARCHAR(50) NOT NULL,
+	last_name VARCHAR(50) NOT NULL,
+	email VARCHAR(50),
+	gender VARCHAR(50) NOT NULL,
+	date_of_birth DATE NOT NULL,
+	car_id BIGINT ,
+	country_of_birth VARCHAR(50),
+	CONSTRAINT "person_car_fkey" FOREIGN KEY ("car_id") REFERENCES "car" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+	-- CONSTRAINT car_id BIGINT REFERENCES car (id),
+	-- UNIQUE(car_id)
+
+);
+```
+
+

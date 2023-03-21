@@ -13,5 +13,8 @@
   "license": "ISC",
   "devDependencies": {
     "vitepress": "^1.0.0-alpha.60"
+  },
+  "dependencies": {
+    "shiki": "^0.14.1"
   }
 }
